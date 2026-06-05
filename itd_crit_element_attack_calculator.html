@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>속공 · 치피 최적화 계산기</title>
+  <style>
+    :root {
+      --bg: #0f1419; --surface: #1a2332; --surface2: #243044; --border: #2d3f56;
+      --text: #e8edf4; --muted: #8fa3bc; --accent: #4da3ff; --accent2: #7c5cff;
+      --positive: #3dd68c; --negative: #ff6b6b; --warn: #ffc857; --bonus: #3dd68c;
+      --locked: #6b7d94;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      background: radial-gradient(ellipse at top, #1a2744 0%, var(--bg) 60%);
+      color: var(--text); min-height: 100vh; line-height: 1.5;
+    }
+    .container { max-width: 1140px; margin: 0 auto; padding: 1.75rem 1.2rem 2.5rem; }
+    header { text-align: center; margin-bottom: 1.4rem; }
+    header h1 { font-size: 1.45rem; font-weight: 700; }
+    header p { color: var(--muted); font-size: 0.84rem; margin-top: 0.3rem; }
+    header a { color: var(--accent); text-decoration: none; }
+    .main { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 1.2rem; align-items: start; }
+    @media (max-width: 920px) { .main { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 1.15rem 1.25rem; margin-bottom: 1.2rem;
+      box-shadow: 0 8px 28px rgba(0,0,0,.22);
+    }
+    .card h2 {
+      font-size: 0.9rem; font-weight: 600; color: var(--accent); margin-bottom: 0.85rem;
+      display: flex; align-items: center; gap: 0.45rem;
+    }
+    .card h2::before {
+      content: ""; width: 4px; height: 1em;
+      background: linear-gradient(180deg, var(--accent), var(--accent2)); border-radius: 2px;
+    }
+    .card h3 { font-size: 0.76rem; color: var(--muted); font-weight: 600; margin: 0.85rem 0 0.5rem; }
+    .card h3:first-child { margin-top: 0; }
+    .info-box {
+      padding: 0.65rem 0.8rem; border-radius: 9px; font-size: 0.77rem; color: var(--muted);
+      background: rgba(77,163,255,.07); border: 1px solid rgba(77,163,255,.22);
+      margin-bottom: 0.8rem; line-height: 1.55;
+    }
+    .info-box strong { color: var(--text); }
+    .elem-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .elem-tab {
+      padding: 0.38rem 0.8rem; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--muted); font-size: 0.8rem; cursor: pointer;
+    }
+    .elem-tab.active {
+      border-color: var(--accent); color: var(--text);
+      background: rgba(77,163,255,.14); font-weight: 600;
+    }
+    .col-h {
+      display: grid; grid-template-columns: 1fr 82px 14px 82px 52px;
+      gap: 0.3rem; font-size: 0.68rem; color: var(--muted); margin-bottom: 0.3rem;
+    }
+    .col-h span:nth-child(2), .col-h span:nth-child(4), .col-h span:nth-child(5) { text-align: right; }
+    .col-h .g { color: var(--bonus); }
+    .stat-row {
+      display: grid; grid-template-columns: 1fr 82px 14px 82px 52px;
+      gap: 0.3rem; align-items: center; margin-bottom: 0.5rem;
+      padding-bottom: 0.5rem; border-bottom: 1px solid rgba(45,63,86,.45);
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-name { font-size: 0.81rem; font-weight: 500; line-height: 1.35; }
+    .stat-name small { display: block; font-size: 0.68rem; color: var(--muted); font-weight: 400; }
+    .plus { text-align: center; color: var(--muted); font-size: 0.82rem; }
+    input[type="number"] {
+      width: 100%; padding: 0.42rem 0.45rem; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+      font-size: 0.82rem; text-align: right;
+    }
+    input:focus { outline: none; border-color: var(--accent); }
+    input:disabled, input.locked {
+      background: rgba(0,0,0,.25); color: var(--locked); border-color: rgba(45,63,86,.6);
+      cursor: not-allowed;
+    }
+    .sum-val {
+      font-family: Consolas, monospace; font-size: 0.8rem; font-weight: 600;
+      text-align: right; color: var(--warn);
+    }
+    .const-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem;
+    }
+    .const-item label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.25rem; }
+    .const-item label strong { color: var(--text); }
+    .ref-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+    @media (max-width: 640px) { .ref-grid, .const-grid { grid-template-columns: 1fr; } }
+    .ref-col h4 {
+      font-size: 0.74rem; color: var(--accent); margin-bottom: 0.4rem;
+      padding-bottom: 0.3rem; border-bottom: 1px solid var(--border);
+    }
+    .ref-grp { margin-bottom: 0.45rem; }
+    .ref-grp-t { font-size: 0.67rem; color: var(--muted); margin-bottom: 0.15rem; }
+    .ref-chk {
+      display: flex; align-items: center; gap: 0.35rem; font-size: 0.74rem;
+      padding: 0.12rem 0; cursor: pointer;
+    }
+    .ref-chk input { accent-color: var(--accent); width: 13px; height: 13px; }
+    .ref-chk .v { margin-left: auto; font-family: Consolas, monospace; font-size: 0.68rem; color: var(--muted); }
+    .derived-row {
+      display: flex; justify-content: space-between; font-size: 0.8rem;
+      padding: 0.38rem 0; border-bottom: 1px solid var(--border);
+    }
+    .derived-row:last-child { border-bottom: none; }
+    .derived-row .k { color: var(--muted); }
+    .derived-row .v { font-family: Consolas, monospace; font-weight: 600; color: var(--accent); }
+    .btn-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.6rem; }
+    .btn {
+      padding: 0.35rem 0.65rem; font-size: 0.72rem; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--accent); cursor: pointer;
+    }
+    .result-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 0.46rem 0; border-bottom: 1px solid var(--border); font-size: 0.84rem;
+    }
+    .result-row:last-child { border-bottom: none; }
+    .result-row .lbl { color: var(--muted); max-width: 58%; }
+    .result-row .val { font-family: Consolas, monospace; font-weight: 600; }
+    .result-row.hi {
+      background: rgba(77,163,255,.08); margin: 0 -.4rem; padding: 0.55rem 0.4rem;
+      border-radius: 7px; border-bottom: none;
+    }
+    .result-row.hi .val { color: var(--warn); font-size: 1rem; }
+    .delta-pos { color: var(--positive); }
+    .delta-neg { color: var(--negative); }
+    .interpret {
+      margin-top: 0.8rem; padding: 0.75rem 0.85rem; background: var(--surface2);
+      border-radius: 9px; border-left: 3px solid var(--accent2);
+      font-size: 0.8rem; color: var(--muted); line-height: 1.6;
+    }
+    .interpret strong { color: var(--text); }
+    footer { text-align: center; font-size: 0.72rem; color: var(--muted); margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>속공 · 치피 최적화 계산기</h1>
+      <p>
+        <a href="https://www.taptap.cn/moment/768893138063329284" target="_blank" rel="noopener">TapTap 원문</a>
+        · 속성 상세정보 그대로 입력
+      </p>
+    </header>
+
+    <div class="main">
+      <div>
+        <!-- 블록 A: 인게임 스탯창 -->
+        <section class="card">
+          <h2>① 속성 상세정보</h2>
+          <div class="info-box">
+            게임과 동일하게 <strong>흰색(기초) + 초록(추가)</strong>을 입력하세요.
+            <strong>임시 버프 표시</strong> 상태를 계산할 상황과 맞추세요.
+          </div>
+
+          <div class="elem-tabs" id="elemTabs">
+            <button type="button" class="elem-tab" data-e="fire">불</button>
+            <button type="button" class="elem-tab active" data-e="water">물</button>
+            <button type="button" class="elem-tab" data-e="wood">나무</button>
+          </div>
+
+          <div class="col-h">
+            <span>스탯</span><span>기초</span><span></span><span class="g">추가</span><span>합계</span>
+          </div>
+
+          <div class="stat-row">
+            <div class="stat-name">치명타 피해<small>% · 합계 = 기초 치피</small></div>
+            <input type="number" id="crit_base" step="any" placeholder="349.1">
+            <div class="plus">+</div>
+            <input type="number" id="crit_bonus" step="any" placeholder="0">
+            <div class="sum-val" id="sum_B0">—</div>
+          </div>
+
+          <div class="stat-row">
+            <div class="stat-name" id="lbl_atk">물 속성 공격<small>· 합계 = 기초 속공</small></div>
+            <input type="number" id="atk_base" step="any" placeholder="1200">
+            <div class="plus">+</div>
+            <input type="number" id="atk_bonus" step="any" placeholder="500">
+            <div class="sum-val" id="sum_E0">—</div>
+          </div>
+        </section>
+
+        <!-- 블록 B: 자료표 -->
+        <section class="card">
+          <h2>② 보유 버프 · 장비 (자료표)</h2>
+          <div class="info-box">
+            체크한 항목으로 <strong>속공 증폭 · 치피 증폭 · 임시 속공 · 임시 치피</strong>를 자동 합산합니다.
+            증폭 = 1+합, 임시값 = 합
+          </div>
+          <div class="ref-grid" id="refGrid"></div>
+          <div class="btn-row">
+            <button type="button" class="btn" id="btnPreset">예시 세팅 불러오기</button>
+            <button type="button" class="btn" id="btnClear">선택 초기화</button>
+          </div>
+        </section>
+
+        <!-- 블록 C: 고정값 + 파생 -->
+        <section class="card">
+          <h2>③ 고정 상수 · 내부 값</h2>
+          <div class="const-grid">
+            <div class="const-item">
+              <label><strong>기본 치명타 피해</strong> (잠금)</label>
+              <input type="text" class="locked" value="150" disabled>
+            </div>
+            <div class="const-item">
+              <label><strong>속공 기준 상수</strong> (잠금)</label>
+              <input type="text" class="locked" value="700" disabled>
+            </div>
+          </div>
+
+          <h3>환산 비율</h3>
+          <div class="stat-row" style="grid-template-columns:1fr 120px 14px 82px 52px;">
+            <div class="stat-name">보석 환산 (치피:속공)<small>기본 5.5</small></div>
+            <input type="number" id="r" step="any" value="5.5" style="grid-column:2/4">
+            <div></div><div></div>
+          </div>
+
+          <h3>자동 산출 (수정 가능)</h3>
+          <div class="stat-row" style="grid-template-columns:1fr 120px;">
+            <div class="stat-name">속성 공격 증폭 배율</div>
+            <input type="number" id="a" step="any" value="1">
+          </div>
+          <div class="stat-row" style="grid-template-columns:1fr 120px; border:none">
+            <div class="stat-name">치명타 피해 증폭 배율</div>
+            <input type="number" id="m" step="any" value="1">
+          </div>
+          <div class="stat-row" style="grid-template-columns:1fr 120px;">
+            <div class="stat-name">임시 속성 공격</div>
+            <input type="number" id="t" step="any" value="0">
+          </div>
+          <div class="stat-row" style="grid-template-columns:1fr 120px; border:none">
+            <div class="stat-name">임시 치명타 피해</div>
+            <input type="number" id="n" step="any" value="0">
+          </div>
+        </section>
+      </div>
+
+      <!-- 블록 D: 결과 -->
+      <section class="card" style="margin-bottom:0; position:sticky; top:1rem;">
+        <h2>④ 최적화 결과</h2>
+        <div class="result-row"><span class="lbl">현재 기대 피해량</span><span class="val" id="D0">—</span></div>
+        <div class="result-row"><span class="lbl">총 투자 자원</span><span class="val" id="Mv">—</span></div>
+        <div class="result-row"><span class="lbl">보정값</span><span class="val" id="Cv">—</span></div>
+        <div class="result-row hi"><span class="lbl">권장 치명타 피해</span><span class="val" id="B1">—</span></div>
+        <div class="result-row hi"><span class="lbl" id="lbl_E1">권장 물 속성 공격</span><span class="val" id="E1">—</span></div>
+        <div class="result-row"><span class="lbl">치명타 피해 조정량</span><span class="val" id="dB">—</span></div>
+        <div class="result-row"><span class="lbl" id="lbl_dE">물 속성 공격 조정량</span><span class="val" id="dE">—</span></div>
+        <div class="result-row hi"><span class="lbl">최적화 기대 상승률</span><span class="val" id="P">—</span></div>
+        <div class="interpret" id="msg">스탯을 입력하세요.</div>
+      </section>
+    </div>
+
+    <footer>기초 치피·속공 = 흰+초록 합 · 기본 치명타 피해 150% · 속공 기준 700</footer>
+  </div>
+
+  <script>
+    const ELEM = {
+      fire: { name: "불", atk: "불 속성 공격" },
+      water: { name: "물", atk: "물 속성 공격" },
+      wood: { name: "나무", atk: "나무 속성 공격" },
+    };
+
+    const REF = {
+      t: { title: "임시 속성 공격 (临时属攻)", groups: [
+        { n: "펫", items: [
+          { id: "t_mw", l: "마환 (魔丸)", v: 220 },
+          { id: "t_ma", l: "말 (马)", v: 100 },
+          { id: "t_thh", l: "토끼불 (兔火火)", v: 120 },
+          { id: "t_gyz", l: "구용자 (咕勇者)", v: 350 },
+        ]},
+        { n: "별자리 (星盘)", items: [
+          { id: "t_xl2", l: "각성 늑대 2 (赋能 狼2)", v: 96 },
+          { id: "t_xl3", l: "각성 늑대 3 (赋能 狼3)", v: 150 },
+        ]},
+        { n: "마법사 (法师)", items: [
+          { id: "t_fs1", l: "보조 속공 1 (副属攻1)", v: 708 },
+          { id: "t_fs2", l: "보조 속공 2 (副属攻2)", v: 937 },
+          { id: "t_fsi", l: "추가 속공 (增加属攻)", v: 493.5 },
+        ]},
+      ]},
+      a: { title: "속성 공격 증폭 (属攻倍率 1+합)", groups: [
+        { n: "펫", items: [{ id: "a_kxm", l: "카시모랄 (卡茜莫拉尔)", v: 0.11 }] },
+        { n: "혼 카드 (魂卡)", items: [{ id: "a_gx", l: "정연 고신 (情缘古辛)", v: 0.18 }] },
+        { n: "한정 장비 (限定装备)", items: [
+          { id: "a_hsb", l: "불 사이버 한정·토끼 (火赛博·兔)", v: 0.15 },
+          { id: "a_hq", l: "혼계 한정 (魂契限定)", v: 0.2 },
+        ]},
+      ]},
+      n: { title: "임시 치명타 피해 (临时暴伤)", groups: [
+        { n: "연금 (炼金)", items: [
+          { id: "n_bs", l: "치피 물약 (暴伤药)", v: 60 },
+          { id: "n_xm", l: "소마 혼계 (小魔魂系)", v: 60 },
+        ]},
+        { n: "혼 카드 (魂卡)", items: [
+          { id: "n_cq", l: "전설 용사-귀 (传奇勇者-鬼)", v: 50 },
+          { id: "n_sz", l: "손중모 (孙仲谋)", v: 160 },
+        ]},
+        { n: "한정 장비 (限定装备)", items: [
+          { id: "n_ssb", l: "물 사이버 한정·맹 (水赛博·猛)", v: 75 },
+          { id: "n_bl", l: "백령보로 (百灵宝炉)", v: 84 },
+        ]},
+        { n: "궁수 (游侠)", items: [
+          { id: "n_hx", l: "활보자 (滑行者)", v: 36 },
+          { id: "n_wd", l: "부두술사 (巫毒师)", v: 72 },
+          { id: "n_xl", l: "뇌전결참 (掀雷决电)", v: 95 },
+        ]},
+        { n: "닌자 (忍者)", items: [
+          { id: "n_bjl", l: "치명타 확률·최종 (暴击率·终)", v: 150 },
+          { id: "n_ni", l: "추가 치피 (增加暴伤)", v: 75 },
+          { id: "n_lx", l: "냉혈 (冷血)", v: 50 },
+          { id: "n_lg", l: "뇌광 (雷光)", v: 139.5 },
+        ]},
+        { n: "혼주 (魂珠)", items: [
+          { id: "n_dk", l: "단일 카드 혼주 (单卡魂珠)", v: 30 },
+          { id: "n_sg", l: "삼국 혼주 (三国魂珠)", v: 24 },
+        ]},
+      ]},
+      m: { title: "치명타 피해 증폭 (暴伤倍率 1+합)", groups: [
+        { n: "닌자 (忍者)", items: [
+          { id: "m_hq1", l: "황천군·솔플 (黄泉军·单人)", v: 0.066 },
+          { id: "m_hq2", l: "황천군·멀티 (黄泉军·多人)", v: 0.132 },
+        ]},
+        { n: "전사 (战士)", items: [{ id: "m_kb", l: "광폭 (狂暴)", v: 0.05 }] },
+        { n: "한정 장비 (限定装备)", items: [
+          { id: "m_ssb", l: "물 사이버 한정·맹 (水赛博·猛)", v: 0.075 },
+          { id: "m_hq", l: "혼계 한정 (魂契限定)", v: 0.2 },
+        ]},
+      ]},
+    };
+
+    const PRESET = ["t_mw", "a_hsb", "m_hq1", "n_bs", "n_ssb"];
+    const LOCKED = { crit: 150, elem: 700 };
+    let elem = "water";
+    let manual = { a: false, m: false, t: false, n: false };
+
+    const $ = (id) => document.getElementById(id);
+    const fmt = (v, d = 2) => Number.isFinite(v) ? v.toLocaleString("ko-KR", { maximumFractionDigits: d }) : "—";
+    const pair = (b, a) => (Number.isFinite(b) ? b : 0) + (Number.isFinite(a) ? a : 0);
+    const num = (id) => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : NaN; };
+
+    function buildRef() {
+      const g = $("refGrid");
+      g.innerHTML = "";
+      for (const [key, col] of Object.entries(REF)) {
+        const div = document.createElement("div");
+        div.className = "ref-col";
+        div.innerHTML = `<h4>${col.title}</h4>`;
+        for (const grp of col.groups) {
+          const box = document.createElement("div");
+          box.className = "ref-grp";
+          box.innerHTML = `<div class="ref-grp-t">${grp.n}</div>`;
+          for (const it of grp.items) {
+            const lb = document.createElement("label");
+            lb.className = "ref-chk";
+            lb.innerHTML = `<input type="checkbox" data-k="${key}" data-id="${it.id}" data-v="${it.v}"><span>${it.l}</span><span class="v">${it.v}</span>`;
+            box.appendChild(lb);
+          }
+          div.appendChild(box);
+        }
+        g.appendChild(div);
+      }
+      g.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+        cb.addEventListener("change", () => { manual[cb.dataset.k] = false; applyRef(); });
+      });
+    }
+
+    function sumRef(k) {
+      let s = 0;
+      document.querySelectorAll(`input[data-k="${k}"]:checked`).forEach((cb) => { s += +cb.dataset.v; });
+      return s;
+    }
+
+    function applyRef() {
+      if (!manual.t) $("t").value = sumRef("t");
+      if (!manual.n) $("n").value = sumRef("n");
+      if (!manual.a) $("a").value = Math.round((1 + sumRef("a")) * 10000) / 10000;
+      if (!manual.m) $("m").value = Math.round((1 + sumRef("m")) * 10000) / 10000;
+      calc();
+    }
+
+    function getB0E0() {
+      const B0 = pair(num("crit_base"), num("crit_bonus"));
+      const E0 = pair(num("atk_base"), num("atk_bonus"));
+      $("sum_B0").textContent = Number.isFinite(B0) && (num("crit_base") || num("crit_bonus") || $("crit_base").value || $("crit_bonus").value) ? fmt(B0) : "—";
+      $("sum_E0").textContent = Number.isFinite(E0) && (num("atk_base") || num("atk_bonus") || $("atk_base").value || $("atk_bonus").value) ? fmt(E0) : "—";
+      return { B0, E0 };
+    }
+
+    function getParams() {
+      const { B0, E0 } = getB0E0();
+      let a = parseFloat($("a").value), m = parseFloat($("m").value);
+      const t = parseFloat($("t").value), n = parseFloat($("n").value), r = parseFloat($("r").value);
+      if (!Number.isFinite(a) || a <= 0) a = 1;
+      if (!Number.isFinite(m) || m <= 0) m = 1;
+      return {
+        B0, E0, a, m,
+        t: Number.isFinite(t) ? t : 0,
+        n: Number.isFinite(n) ? n : 0,
+        r: Number.isFinite(r) ? r : 0,
+      };
+    }
+
+    function calc() {
+      const { B0, E0, a, m, t, n, r } = getParams();
+      const info = ELEM[elem];
+
+      if (!(B0 > 0 && E0 > 0 && r !== 0)) {
+        ["D0","Mv","Cv","B1","E1","dB","dE","P"].forEach((id) => $(id).textContent = "—");
+        $("msg").textContent = "치명타 피해·주속성 공격(흰+초록)을 입력하세요.";
+        return;
+      }
+
+      const D0 = (m * B0 + n + LOCKED.crit) * (a * E0 + t + LOCKED.elem);
+      const C = (t + LOCKED.elem) / a - (r * (n + LOCKED.crit)) / m;
+      const M = B0 + E0 / r;
+      const B1 = M / 2 + C / (2 * r);
+      const E1 = (r * M) / 2 - C / 2;
+      const D1 = (m * B1 + n + LOCKED.crit) * (a * E1 + t + LOCKED.elem);
+      const dB = B1 - B0, dE = E1 - E0;
+      const P = D0 > 0 ? ((D1 / D0 - 1) * 100) : 0;
+
+      $("D0").textContent = fmt(D0, 0);
+      $("Mv").textContent = fmt(M);
+      $("Cv").textContent = fmt(C);
+      $("B1").textContent = fmt(B1);
+      $("E1").textContent = fmt(E1);
+      $("dB").innerHTML = fmtDelta(dB);
+      $("dE").innerHTML = fmtDelta(dE);
+      $("P").textContent = fmt(P, 4) + "%";
+
+      let msg = "";
+      if (dE > 0 && dB < 0)
+        msg = `<strong>${info.atk}</strong>을 늘리고 <strong>치명타 피해</strong>를 줄이세요. (치피 ${fmt(dB)}, 속공 +${fmt(dE)})`;
+      else if (dE < 0 && dB > 0)
+        msg = `<strong>치명타 피해</strong>를 늘리고 <strong>${info.atk}</strong>을 줄이세요. (치피 +${fmt(dB)}, 속공 ${fmt(dE)})`;
+      else if (Math.abs(dE) < 0.01 && Math.abs(dB) < 0.01)
+        msg = "<strong>현재 배분이 이미 최적에 가깝습니다.</strong>";
+      else {
+        if (dB > 0) msg += `치명타 피해 <strong>+${fmt(dB)}</strong> `;
+        if (dB < 0) msg += `치명타 피해 <strong>${fmt(dB)}</strong> `;
+        if (dE > 0) msg += `${info.atk} <strong>+${fmt(dE)}</strong>`;
+        if (dE < 0) msg += `${info.atk} <strong>${fmt(dE)}</strong>`;
+      }
+      msg += `<br>딜량 증가 예측: <strong>${fmt(P, 4)}%</strong>`;
+      $("msg").innerHTML = msg;
+    }
+
+    function fmtDelta(v) {
+      if (!Number.isFinite(v)) return "—";
+      const s = v > 0 ? "+" : "";
+      const c = v > 0 ? "delta-pos" : v < 0 ? "delta-neg" : "";
+      return `<span class="${c}">${s}${fmt(v)}</span>`;
+    }
+
+    function setElem(e) {
+      elem = e;
+      document.querySelectorAll(".elem-tab").forEach((b) => b.classList.toggle("active", b.dataset.e === e));
+      $("lbl_atk").innerHTML = `${ELEM[e].atk}<small>· 합계 = 기초 속공</small>`;
+      $("lbl_E1").textContent = `권장 ${ELEM[e].atk}`;
+      $("lbl_dE").textContent = `${ELEM[e].atk} 조정량`;
+      calc();
+    }
+
+    $("elemTabs").addEventListener("click", (ev) => {
+      const b = ev.target.closest(".elem-tab");
+      if (b) setElem(b.dataset.e);
+    });
+
+    $("btnPreset").addEventListener("click", () => {
+      $("crit_base").value = 919.6; $("crit_bonus").value = 0;
+      $("atk_base").value = 5276; $("atk_bonus").value = 0;
+      $("r").value = 5.5;
+      document.querySelectorAll('input[type=checkbox]').forEach((cb) => {
+        cb.checked = PRESET.includes(cb.dataset.id);
+      });
+      manual = { a: false, m: false, t: false, n: false };
+      applyRef();
+    });
+
+    $("btnClear").addEventListener("click", () => {
+      document.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
+      manual = { a: false, m: false, t: false, n: false };
+      applyRef();
+    });
+
+    ["a","m","t","n"].forEach((id) => {
+      $(id).addEventListener("input", () => { manual[id] = true; calc(); });
+    });
+    ["crit_base","crit_bonus","atk_base","atk_bonus","r"].forEach((id) => {
+      $(id).addEventListener("input", calc);
+    });
+
+    buildRef();
+    setElem("water");
+    calc();
+  </script>
+</body>
+</html>
