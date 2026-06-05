@@ -328,6 +328,8 @@
       <!-- 블록 D: 결과 -->
       <section class="card" style="margin-bottom:0; position:sticky; top:1rem;">
         <h2>④ 최적화 결과</h2>
+        <div class="result-row"><span class="lbl">현재 최종 치명타 피해량</span><span class="val" id="finalCrit">—</span></div>
+        <div class="result-row"><span class="lbl" id="lbl_finalElem">현재 최종 물 속성 공격력</span><span class="val" id="finalElem">—</span></div>
         <div class="result-row"><span class="lbl">현재 기대 피해량</span><span class="val" id="D0">—</span></div>
         <div class="result-row"><span class="lbl">총 투자 자원</span><span class="val" id="Mv">—</span></div>
         <div class="result-row"><span class="lbl">보정값</span><span class="val" id="Cv">—</span></div>
@@ -366,6 +368,9 @@
           { id: "t_fs1", l: "보조 속공 1 (副属攻1)", v: 708 },
           { id: "t_fs2", l: "보조 속공 2 (副属攻2)", v: 937 },
           { id: "t_fsi", l: "추가 속공 (增加属攻)", v: 493.5 },
+        ]},
+        { n: "한정 장비 (限定装备)", items: [
+          { id: "t_ryyl", l: "열일원륜", v: 500 },
         ]},
       ]},
       a: { title: "속성 공격 증폭 (属攻倍率 1+합)", groups: [
@@ -506,12 +511,14 @@
       const info = ELEM[elem];
 
       if (!(B0 > 0 && E0 > 0 && r !== 0)) {
-        ["D0","Mv","Cv","B1","E1","dB","dE","P"].forEach((id) => $(id).textContent = "—");
+        ["finalCrit","finalElem","D0","Mv","Cv","B1","E1","dB","dE","P"].forEach((id) => $(id).textContent = "—");
         $("msg").textContent = "치명타 피해·주속성 공격(흰+초록)을 입력하세요.";
         return;
       }
 
-      const D0 = (m * B0 + n + LOCKED.crit) * (a * E0 + t + LOCKED.elem);
+      const finalCrit = m * B0 + n + LOCKED.crit;
+      const finalElem = a * E0 + t + LOCKED.elem;
+      const D0 = finalCrit * finalElem;
       const C = (t + LOCKED.elem) / a - (r * (n + LOCKED.crit)) / m;
       const M = B0 + E0 / r;
       const B1 = M / 2 + C / (2 * r);
@@ -520,6 +527,8 @@
       const dB = B1 - B0, dE = E1 - E0;
       const P = D0 > 0 ? ((D1 / D0 - 1) * 100) : 0;
 
+      $("finalCrit").textContent = fmt(finalCrit);
+      $("finalElem").textContent = fmt(finalElem, 0);
       $("D0").textContent = fmt(D0, 0);
       $("Mv").textContent = fmt(M);
       $("Cv").textContent = fmt(C);
@@ -557,6 +566,7 @@
       elem = e;
       document.querySelectorAll(".elem-tab").forEach((b) => b.classList.toggle("active", b.dataset.e === e));
       $("lbl_atk").innerHTML = `${ELEM[e].atk}<small>· 합계 = 기초 속공</small>`;
+      $("lbl_finalElem").textContent = `현재 최종 ${ELEM[e].atk}력`;
       $("lbl_E1").textContent = `권장 ${ELEM[e].atk}`;
       $("lbl_dE").textContent = `${ELEM[e].atk} 조정량`;
       calc();
