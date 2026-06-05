@@ -39,6 +39,7 @@
     }
     .card h3 { font-size: 0.76rem; color: var(--muted); font-weight: 600; margin: 0.85rem 0 0.5rem; }
     .card h3:first-child { margin-top: 0; }
+    h3.tip-wrap { color: var(--muted); }
     .info-box {
       padding: 0.65rem 0.8rem; border-radius: 9px; font-size: 0.77rem; color: var(--muted);
       background: rgba(77,163,255,.07); border: 1px solid rgba(77,163,255,.22);
@@ -68,6 +69,36 @@
     .stat-row:last-child { border-bottom: none; }
     .stat-name { font-size: 0.81rem; font-weight: 500; line-height: 1.35; }
     .stat-name small { display: block; font-size: 0.68rem; color: var(--muted); font-weight: 400; }
+    .tip-wrap { position: relative; cursor: help; width: fit-content; max-width: 100%; }
+    .tip-head { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .tip-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: rgba(77,163,255,.15); border: 1px solid rgba(77,163,255,.45);
+      color: var(--accent); font-size: 0.62rem; font-weight: 700; line-height: 1;
+      flex-shrink: 0;
+    }
+    .tip-box {
+      visibility: hidden; opacity: 0;
+      position: absolute; left: 0; top: calc(100% + 8px);
+      width: min(300px, calc(100vw - 2.5rem));
+      padding: 0.65rem 0.75rem;
+      background: #1e2d42; border: 1px solid var(--border);
+      border-radius: 8px; box-shadow: 0 10px 28px rgba(0,0,0,.35);
+      font-size: 0.72rem; font-weight: 400; color: var(--muted);
+      line-height: 1.55; z-index: 30; pointer-events: none;
+      transition: opacity .15s, visibility .15s;
+    }
+    .tip-box strong { color: var(--text); font-weight: 600; }
+    .tip-box::before {
+      content: ""; position: absolute; top: -5px; left: 14px;
+      width: 8px; height: 8px; background: #1e2d42;
+      border-left: 1px solid var(--border); border-top: 1px solid var(--border);
+      transform: rotate(45deg);
+    }
+    .tip-wrap:hover .tip-box, .tip-wrap:focus-within .tip-box {
+      visibility: visible; opacity: 1;
+    }
     .plus { text-align: center; color: var(--muted); font-size: 0.82rem; }
     input[type="number"] {
       width: 100%; padding: 0.42rem 0.45rem; background: var(--surface2);
@@ -114,6 +145,28 @@
       padding: 0.35rem 0.65rem; font-size: 0.72rem; border-radius: 6px;
       border: 1px solid var(--border); background: var(--surface2); color: var(--accent); cursor: pointer;
     }
+    .ref-collapse { width: 100%; }
+    .ref-collapse-head {
+      display: flex; align-items: center; gap: 0.5rem;
+      cursor: pointer; list-style: none; user-select: none;
+    }
+    .ref-collapse-head::-webkit-details-marker { display: none; }
+    .ref-collapse-title {
+      flex: 1; display: flex; align-items: center; gap: 0.45rem;
+      font-size: 0.9rem; font-weight: 600; color: var(--accent);
+    }
+    .ref-collapse-title::before {
+      content: ""; width: 4px; height: 1em; flex-shrink: 0;
+      background: linear-gradient(180deg, var(--accent), var(--accent2)); border-radius: 2px;
+    }
+    .ref-collapse-meta { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+    .ref-collapse-chevron {
+      width: 7px; height: 7px; flex-shrink: 0;
+      border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+      transform: rotate(45deg); transition: transform .2s;
+    }
+    .ref-collapse[open] .ref-collapse-chevron { transform: rotate(-135deg); }
+    .ref-collapse-body { margin-top: 0.85rem; }
     .result-row {
       display: flex; justify-content: space-between; align-items: baseline;
       padding: 0.46rem 0; border-bottom: 1px solid var(--border); font-size: 0.84rem;
@@ -186,16 +239,25 @@
 
         <!-- 블록 B: 자료표 -->
         <section class="card">
-          <h2>② 보유 버프 · 장비 (자료표)</h2>
-          <div class="info-box">
-            체크한 항목으로 <strong>속공 증폭 · 치피 증폭 · 임시 속공 · 임시 치피</strong>를 자동 합산합니다.
-            증폭 = 1+합, 임시값 = 합
-          </div>
-          <div class="ref-grid" id="refGrid"></div>
-          <div class="btn-row">
-            <button type="button" class="btn" id="btnPreset">예시 세팅 불러오기</button>
-            <button type="button" class="btn" id="btnClear">선택 초기화</button>
-          </div>
+          <details class="ref-collapse" id="refCollapse">
+            <summary class="ref-collapse-head">
+              <span class="ref-collapse-title">② 보유 버프 · 장비 (체크 시 해당 능력치 자동 반영)</span>
+              <span class="ref-collapse-meta" id="refCollapseMeta">펼치기</span>
+              <span class="ref-collapse-chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="ref-collapse-body">
+              <div class="info-box">
+                체크한 항목으로 <strong>속공 증폭 · 치피 증폭 · 임시 속공 · 임시 치피</strong>를 자동 합산합니다.<br>
+                증폭 = 1+합, 임시값 = 합<br>
+                표에 없는 버프나 아이템의 경우 체크하지 말고 '③ 고정 상수 · 내부 값' 항목에서 직접 입력하세요.
+              </div>
+              <div class="ref-grid" id="refGrid"></div>
+              <div class="btn-row">
+                <button type="button" class="btn" id="btnPreset">예시 세팅 불러오기</button>
+                <button type="button" class="btn" id="btnClear">선택 초기화</button>
+              </div>
+            </div>
+          </details>
         </section>
 
         <!-- 블록 C: 고정값 + 파생 -->
@@ -214,12 +276,36 @@
 
           <h3>환산 비율</h3>
           <div class="stat-row" style="grid-template-columns:1fr 120px 14px 82px 52px;">
-            <div class="stat-name">보석 환산 (치피:속공)<small>기본 5.5</small></div>
+            <div class="stat-name tip-wrap" tabindex="0">
+              <div class="tip-head">
+                <span class="tip-label">보석 환산 (치피:속공)</span>
+                <span class="tip-icon" aria-hidden="true">!</span>
+              </div>
+              <div class="tip-box" role="tooltip">
+                보석으로 <strong>치피 ↔ 속공</strong>을 바꿀 때의 교환 비율입니다.<br>
+                예) <strong>5.5</strong> → 치피 1 = 속공 5.5 (같은 비용)<br>
+                총 투자 자원 <strong>M = 치피 + 속공 ÷ r</strong><br>
+                치피 1 줄이면 속공 r만큼 올릴 수 있습니다. 직업·서버에 따라 <strong>5</strong> 등으로 조정하세요.
+              </div>
+              <small>기본 5.5</small>
+            </div>
             <input type="number" id="r" step="any" value="5.5" style="grid-column:2/4">
             <div></div><div></div>
           </div>
 
-          <h3>자동 산출 (수정 가능)</h3>
+          <h3 class="tip-wrap" tabindex="0">
+            <div class="tip-head">
+              <span class="tip-label">자동 산출 (수정 가능)</span>
+              <span class="tip-icon" aria-hidden="true">!</span>
+            </div>
+            <div class="tip-box" role="tooltip">
+              ② <strong>장비 자료표</strong>에서 보유 항목을 체크하면 아래 4개 값이 <strong>자동 합산</strong>됩니다.<br>
+              · 속성 공격 증폭 배율 · 치명타 피해 증폭 배율<br>
+              · 임시 속성 공격 · 임시 치명타 피해<br>
+              자료표에 없는 장비·버프는 <strong>해당 수치만큼 직접 입력</strong>하세요.<br>
+              칸을 직접 고치면 그 항목은 <strong>수동 모드</strong>가 되어, 자료표를 다시 체크할 때까지 자동 덮어쓰기가 멈춥니다.
+            </div>
+          </h3>
           <div class="stat-row" style="grid-template-columns:1fr 120px;">
             <div class="stat-name">속성 공격 증폭 배율</div>
             <input type="number" id="a" step="any" value="1">
@@ -364,8 +450,19 @@
         g.appendChild(div);
       }
       g.querySelectorAll("input[type=checkbox]").forEach((cb) => {
-        cb.addEventListener("change", () => { manual[cb.dataset.k] = false; applyRef(); });
+        cb.addEventListener("change", () => {
+          manual[cb.dataset.k] = false;
+          applyRef();
+          updateRefCollapseMeta();
+        });
       });
+    }
+
+    function updateRefCollapseMeta() {
+      const open = $("refCollapse").open;
+      const cnt = document.querySelectorAll("#refGrid input[type=checkbox]:checked").length;
+      const action = open ? "접기" : "펼치기";
+      $("refCollapseMeta").textContent = !open && cnt > 0 ? `${cnt}개 선택 · ${action}` : action;
     }
 
     function sumRef(k) {
@@ -479,12 +576,14 @@
       });
       manual = { a: false, m: false, t: false, n: false };
       applyRef();
+      updateRefCollapseMeta();
     });
 
     $("btnClear").addEventListener("click", () => {
       document.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
       manual = { a: false, m: false, t: false, n: false };
       applyRef();
+      updateRefCollapseMeta();
     });
 
     ["a","m","t","n"].forEach((id) => {
@@ -494,9 +593,12 @@
       $(id).addEventListener("input", calc);
     });
 
+    $("refCollapse").addEventListener("toggle", updateRefCollapseMeta);
+
     buildRef();
     setElem("water");
     calc();
+    updateRefCollapseMeta();
   </script>
 </body>
 </html>
